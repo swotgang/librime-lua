@@ -10,31 +10,31 @@ jobs:
     steps:
       - name: Checkout librime-lua
         uses: actions/checkout@v4
-        # 检出到单独文件夹，避免路径嵌套循环
         with:
           path: lua_src
 
-      - name: Download librime 1.13.1 source
+      - name: Checkout librime source
         run: |
           git clone https://github.com/rime/librime.git
           cd librime
           git checkout 1.13.1
           cd ..
-          # 创建plugins目录
           if (!(Test-Path "librime/plugins")) { New-Item -ItemType Directory -Path "librime/plugins" }
-          # 把lua_src里的源码复制到插件目录，不再是.当前目录，解决循环拷贝
           xcopy /e /y lua_src librime\plugins\librime-lua\
 
-      - name: Install build tools
+      - name: Setup vcpkg
+        uses: microsoft/vcpkg-tool/main@v1
+
+      - name: Install librime required dependencies
         run: |
-          choco install ninja cmake
+          vcpkg install boost:x64-windows glog:x64-windows gflags:x64-windows yaml-cpp:x64-windows leveldb:x64-windows
 
       - name: Cmake Build
         run: |
           cd librime
           mkdir build
           cd build
-          cmake .. -G Ninja -DBUILD_SHARED_LIBS=ON
+          cmake .. -G "Ninja" -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DBUILD_SHARED_LIBS=ON
           ninja
 
       - name: Upload compiled dll artifacts
